@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>កម្មវិធីបង្កើត QR Code</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #f4f7f6;
+        }
+        .container {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 { color: #333; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #218838; }
+        input:focus, select:focus {
+            border-color: #28a745;
+            outline: none;
+            box-shadow: 0 0 5px rgba(40, 167, 69, 0.1);
+        }
+        .download-btn {
+            margin-top: 15px;
+            background-color: #007bff;
+            display: none; /* លាក់ប៊ូតុងសិន រង់ចាំទាល់តែបង្កើត QR រួច */
+        }
+        .download-btn:hover { background-color: #0056b3; }
+        .pdf-btn {
+            margin-top: 10px;
+            background-color: #dc3545; /* ពណ៌ក្រហមសម្រាប់ PDF */
+            display: none;
+        }
+        .pdf-btn:hover { background-color: #c82333; }
+        .print-btn {
+            margin-top: 10px;
+            background-color: #ff9800; /* ពណ៌ទឹកក្រូចសម្រាប់ Print */
+            display: none;
+        }
+        .print-btn:hover { background-color: #e68a00; }
+        .reset-btn {
+            margin-top: 10px;
+            background-color: #6c757d; /* ពណ៌ប្រផេះសម្រាប់ Reset */
+        }
+        .reset-btn:hover { background-color: #5a6268; }
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 2px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+        }
+        #qrcode {
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+        }
+        #qrcode canvas, #qrcode img {
+            max-width: 100%;
+            height: auto !important;
+        }
+        .color-options {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .color-options label { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; margin: 0; }
+
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background-color: #1a1a1a;
+        }
+        .dark-mode .container {
+            background-color: #2d2d2d;
+            color: #f4f7f6;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .dark-mode h2, .dark-mode .input-group label, .dark-mode label {
+            color: #fff;
+        }
+        .dark-mode input, .dark-mode select {
+            background-color: #3d3d3d;
+            color: #fff;
+            border-color: #555;
+        }
+        .dark-mode .show-pass-container label {
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="text-align: right;">
+        <button id="dark-mode-toggle" onclick="toggleDarkMode()" style="width: auto; padding: 5px 10px; margin-bottom: 10px; background-color: #444; font-size: 14px;">🌙</button>
+    </div>
+    <h2>បង្កើត QR Code WiFi</h2>
+
+    <div id="wifi-input-container">
+        <div class="input-group">
+            <label for="wifi-ssid">ឈ្មោះ WiFi (SSID)</label>
+            <input type="text" id="wifi-ssid" placeholder="ឈ្មោះបណ្តាញ WiFi" oninput="generateQR()">
+        </div>
+
+        <div class="input-group">
+            <label for="wifi-pass">លេខសម្ងាត់ WiFi</label>
+            <input type="password" id="wifi-pass" placeholder="លេខសម្ងាត់" oninput="generateQR()">
+            <div class="show-pass-container" style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                <input type="checkbox" id="show-pass" onchange="togglePassword()" style="width: auto; margin: 0; cursor: pointer;">
+                <label for="show-pass" style="font-size: 13px; color: #666; cursor: pointer; font-weight: normal;">បង្ហាញលេខសម្ងាត់</label>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="wifi-type">ប្រភេទសុវត្ថិភាព</label>
+            <select id="wifi-type" onchange="generateQR()">
+            <option value="WPA">WPA/WPA2</option>
+            <option value="WEP">WEP</option>
+            <option value="nopass">គ្មានលេខសម្ងាត់</option>
+        </select>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 15px; text-align: left; font-size: 14px;">
+        <label>ទំហំ QR Code: <span id="size-text">200</span>px</label>
+        <input type="range" id="qr-size" min="100" max="400" value="200" step="10" oninput="document.getElementById('size-text').innerText = this.value; generateQR()" style="margin: 5px 0;">
+    </div>
+
+    <div style="margin-bottom: 15px; text-align: left; font-size: 14px;">
+        <label for="logo-input">ផ្ទុកឡើង Logo (ស្រេចតែចិត្ត)</label>
+        <input type="file" id="logo-input" accept="image/*" onchange="generateQR()" style="margin: 5px 0; border: none; padding: 0;">
+    </div>
+    <div style="margin-bottom: 15px; text-align: left; font-size: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <input type="checkbox" id="add-frame" onchange="generateQR()" style="width: auto; margin: 0; cursor: pointer;">
+            <label for="add-frame" style="cursor: pointer;">បន្ថែម Frame ជុំវិញ QR</label>
+        </div>
+        <input type="text" id="frame-text" value="SCAN ME" placeholder="បញ្ចូលអត្ថបទក្នុង Frame" oninput="generateQR()" style="margin: 0; padding: 10px; font-size: 14px;">
+    </div>
+
+    <div class="input-group">
+        <label for="paper-size">ទំហំក្រដាស (Paper Size)</label>
+        <select id="paper-size" onchange="saveSettings()">
+            <option value="a4" selected>A4</option>
+            <option value="a5">A5</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>ប្លង់សន្លឹក PDF (Cols x Rows)</label>
+        <div style="display: flex; gap: 10px;">
+            <input type="number" id="sheet-cols" min="1" max="5" value="2" oninput="saveSettings()" style="margin: 0;">
+            <input type="number" id="sheet-rows" min="1" max="10" value="3" oninput="saveSettings()" style="margin: 0;">
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label for="print-size">ទំហំបោះពុម្ព (Print Size)</label>
+        <select id="print-size" onchange="saveSettings()">
+            <option value="small">តូច (Small)</option>
+            <option value="medium" selected>មធ្យម (Medium)</option>
+            <option value="large">ធំ (Large)</option>
+        </select>
+    </div>
+
+    <div class="color-options">
+        <label>ពណ៌ QR
+            <input type="color" id="color-dark" value="#000000" oninput="generateQR()">
+        </label>
+        <label>ពណ៌ផ្ទៃក្រោយ
+            <input type="color" id="color-light" value="#ffffff" oninput="generateQR()">
+        </label>
+    </div>
+
+    <button onclick="generateQR()">បង្កើត QR Code</button>
+    <button id="download-btn" class="download-btn" onclick="downloadQR()">ទាញយករូបភាព (Download)</button>
+    <button id="pdf-btn" class="pdf-btn" onclick="downloadPDF()">ទាញយកជា PDF</button>
+    <button id="print-btn" class="print-btn" onclick="printQR()">បោះពុម្ព (Print)</button>
+    <button class="reset-btn" onclick="resetSettings()">សម្អាតការកំណត់ (Reset)</button>
+    <div id="qrcode"></div>
+</div>
+
+<script>
+    // មុខងាររក្សាទុកការកំណត់ចូលក្នុង localStorage
+    function saveSettings() {
+        const settings = {
+            colorDark: document.getElementById("color-dark").value,
+            colorLight: document.getElementById("color-light").value,
+            qrSize: document.getElementById("qr-size").value,
+            frameText: document.getElementById("frame-text").value,
+            addFrame: document.getElementById("add-frame").checked,
+            ssid: document.getElementById("wifi-ssid").value,
+            encryption: document.getElementById("wifi-type").value,
+            darkMode: document.body.classList.contains('dark-mode'),
+            printSize: document.getElementById("print-size").value,
+            paperSize: document.getElementById("paper-size").value,
+            sheetCols: document.getElementById("sheet-cols").value,
+            sheetRows: document.getElementById("sheet-rows").value
+        };
+        localStorage.setItem("qrWiFiSettings", JSON.stringify(settings));
+    }
+
+    function generateQR() {
+        var colorDark = document.getElementById("color-dark").value;
+        var colorLight = document.getElementById("color-light").value;
+        var qrSize = parseInt(document.getElementById("qr-size").value); // ទទួលបានទំហំពី Slider
+        var logoInput = document.getElementById("logo-input"); // ទទួលបាន Element Input សម្រាប់ Logo
+        
+        var ssid = document.getElementById("wifi-ssid").value;
+        var pass = document.getElementById("wifi-pass").value;
+        var encryption = document.getElementById("wifi-type").value;
+
+        saveSettings(); // រក្សាទុកការកំណត់រាល់ពេលដែលមានការផ្លាស់ប្តូរ
+
+        function clearQR() {
+            document.getElementById("qrcode").innerHTML = "";
+            document.getElementById("download-btn").style.display = "none";
+            document.getElementById("pdf-btn").style.display = "none";
+            document.getElementById("print-btn").style.display = "none";
+        }
+
+        if (ssid.trim() === "") {
+            clearQR();
+            return;
+        }
+
+        // រៀបចំទិន្នន័យ WiFi: WIFI:S:SSID;T:TYPE;P:PASS;;
+        var finalData = `WIFI:S:${ssid};T:${encryption};`;
+        if (encryption !== "nopass" && pass) {
+            finalData += `P:${pass};`;
+        }
+        finalData += `;`;
+        
+        // លុប QR Code ចាស់ចេញមុននឹងបង្កើតថ្មីដើម្បីប្តូរពណ៌
+        var qrContainer = document.getElementById("qrcode");
+        qrContainer.innerHTML = "";
+        document.getElementById("download-btn").style.display = "none"; // លាក់ប៊ូតុងទាញយកជាមុន
+        document.getElementById("pdf-btn").style.display = "none";
+
+        // បង្កើត QR Code ថ្មីជាមួយ Option ពណ៌
+        var qr = new QRCode(qrContainer, { // រក្សាទុក instance របស់ QRCode
+            text: finalData,
+            width: qrSize,
+            height: qrSize,
+            colorDark : colorDark,
+            colorLight : colorLight,
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        // បន្ថែម Logo បន្ទាប់ពី QR Code ត្រូវបានបង្កើត (ត្រូវការពេលបន្តិចដើម្បី render canvas)
+        setTimeout(function() {
+            const canvas = qrContainer.querySelector("canvas");
+            if (!canvas) return;
+
+            const ctx = canvas.getContext("2d");
+            const qrSizeValue = canvas.width;
+
+            // ១. បន្ថែម Frame ជាមួយស្រមោល (Shadow)
+            if (document.getElementById("add-frame").checked) {
+                const frameText = document.getElementById("frame-text").value || "SCAN ME";
+                
+                const tempCanvas = document.createElement("canvas");
+                tempCanvas.width = qrSizeValue;
+                tempCanvas.height = qrSizeValue;
+                const tempCtx = tempCanvas.getContext("2d");
+                tempCtx.imageSmoothingEnabled = false; // បិទការធ្វើឱ្យរលោងដើម្បីឱ្យ QR ច្បាស់
+                tempCtx.drawImage(canvas, 0, 0);
+
+                // សម្អាត Canvas ដើម ដើម្បីគូរ Frame
+                ctx.fillStyle = colorLight;
+                ctx.fillRect(0, 0, qrSizeValue, qrSizeValue);
+
+                // គូរស៊ុម Frame
+                ctx.strokeStyle = colorDark;
+                ctx.lineWidth = qrSizeValue * 0.02;
+                const padding = qrSizeValue * 0.1;
+                ctx.strokeRect(padding/2, padding/2, qrSizeValue - padding, qrSizeValue - padding);
+
+                // គូរប្រអប់ SCAN ME ខាងក្រោម
+                const footerHeight = qrSizeValue * 0.15;
+                ctx.fillStyle = colorDark;
+                ctx.fillRect(padding/2, qrSizeValue - footerHeight - (padding/2), qrSizeValue - padding, footerHeight);
+
+                // គូរ QR ចូលមកវិញក្នុងទំហំតូចជាងមុនបន្តិច
+                ctx.imageSmoothingEnabled = false; // បិទការធ្វើឱ្យរលោង
+                const innerSize = qrSizeValue - (padding * 2);
+                ctx.drawImage(tempCanvas, padding, padding * 0.5, innerSize, innerSize);
+
+                // គូរអត្ថបទដែលអ្នកប្រើប្រាស់បញ្ចូល
+                ctx.fillStyle = colorLight;
+                ctx.font = `bold ${Math.floor(qrSizeValue * 0.07)}px 'Segoe UI', Arial`;
+                ctx.textAlign = "center";
+                ctx.fillText(frameText, qrSizeValue / 2, qrSizeValue - (footerHeight / 2.3));
+            }
+
+            // ២. មុខងារ Update Preview និងបង្ហាញប៊ូតុង
+            const finalize = () => {
+                const img = qrContainer.querySelector("img");
+                if (img) img.src = canvas.toDataURL();
+                document.getElementById("download-btn").style.display = "block";
+                document.getElementById("pdf-btn").style.display = "block";
+                document.getElementById("print-btn").style.display = "block";
+            };
+
+            // ៣. មុខងារគូរ Logo (ជំនួយ)
+            const drawLogoToCanvas = (imageSrc) => {
+                const logo = new Image();
+                logo.src = imageSrc;
+                logo.onload = () => {
+                    const logoSize = qrSizeValue * 0.22;
+                    const x = (qrSizeValue - logoSize) / 2;
+                    
+                    // គណនាទីតាំង Y ឱ្យចំកណ្តាល QR Code (ទោះបីជាមាន Frame ឬអត់)
+                    let y;
+                    if (document.getElementById("add-frame").checked) {
+                        const padding = qrSizeValue * 0.1;
+                        y = (padding * 0.5) + ((qrSizeValue - padding * 2) / 2) - (logoSize / 2);
+                    } else {
+                        y = (qrSizeValue - logoSize) / 2;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(x + logoSize/2, y + logoSize/2, logoSize/2, 0, Math.PI * 2);
+                    ctx.fillStyle = colorLight;
+                    ctx.fill();
+                    ctx.save();
+                    ctx.clip();
+                    ctx.drawImage(logo, x, y, logoSize, logoSize);
+                    ctx.restore();
+                    finalize();
+                };
+            };
+
+            // ៤. សម្រេចចិត្តថាប្រើ Logo មួយណា
+            if (logoInput.files && logoInput.files[0]) {
+                // ករណីអ្នកប្រើ Upload ខ្លួនឯង
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    drawLogoToCanvas(e.target.result);
+                };
+                reader.readAsDataURL(logoInput.files[0]);
+            } else {
+                finalize();
+            }
+        }, 50); // ផ្អាកបន្តិចដើម្បីឱ្យ qrcode.js render canvas រួចរាល់
+    }
+
+    function downloadQR() {
+        const qrContainer = document.getElementById("qrcode");
+        // រកមើលរូបភាព (img) ដែល library បានបង្កើត
+        const img = qrContainer.querySelector("img");
+        
+        if (img && img.src) {
+            const link = document.createElement("a");
+            link.href = img.src;
+            link.download = "qrcode.png";
+            link.click();
+        } else {
+            // បើករណី img មិនទាន់មាន ព្យាយាមយកពី canvas
+            const canvas = qrContainer.querySelector("canvas");
+            if (canvas) {
+                const link = document.createElement("a");
+                link.href = canvas.toDataURL("image/png");
+                link.download = "qrcode.png";
+                link.click();
+            }
+        }
+    }
+
+    function downloadPDF() {
+        const qrContainer = document.getElementById("qrcode");
+        const canvas = qrContainer.querySelector("canvas");
+        const ssid = document.getElementById("wifi-ssid").value;
+        const paperSize = document.getElementById("paper-size").value;
+        
+        if (canvas) {
+            const { jsPDF } = window.jspdf;
+
+            // 1. បង្កើត Canvas គុណភាពខ្ពស់សម្រាប់ PDF export
+            const highResQrSize = 800; // កំណត់ទំហំធំល្មមសម្រាប់គុណភាព PDF
+            const highResCanvas = document.createElement('canvas');
+            highResCanvas.width = highResQrSize;
+            highResCanvas.height = highResQrSize;
+            const highResCtx = highResCanvas.getContext('2d');
+            
+            // គូរ QR Code ដើម (ដែលបានតុបតែងហើយ) ទៅក្នុង Canvas ថ្មីដែលមានគុណភាពខ្ពស់
+            highResCtx.imageSmoothingEnabled = false; // ធានាគុណភាពច្បាស់
+            highResCtx.drawImage(canvas, 0, 0, highResQrSize, highResQrSize);
+
+            const imgData = highResCanvas.toDataURL("image/png", 1.0); // 1.0 សម្រាប់គុណភាពខ្ពស់បំផុត
+            
+            const pdf = new jsPDF('p', 'mm', paperSize);
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            
+            // ១. បន្ថែមចំណងជើងទំព័រ
+            pdf.setFontSize(18);
+            pdf.text("WiFi QR KHRU ", pageWidth / 2, 15, { align: 'center' });
+
+            // បន្ថែមឈ្មោះអ្នកបង្កើត
+            pdf.setFontSize(10);
+            const creatorName = "Created by: KIN HAV";
+            const creatorUrl = "t.me/kinhav";
+            const creatorText = `${creatorName} (${creatorUrl})`;
+            pdf.text(creatorText, pageWidth / 2, 22, { align: 'center' }); // ដាក់នៅក្រោមចំណងជើង
+
+            // ២. កំណត់ Grid តាមការជ្រើសរើសរបស់អ្នកប្រើប្រាស់
+            const cols = parseInt(document.getElementById("sheet-cols").value) || 2;
+            const rows = parseInt(document.getElementById("sheet-rows").value) || 3;
+            const totalItems = cols * rows;
+
+            const margin = 15;    // គម្លាតពីគែមក្រដាស
+            const gap = 10;       // គម្លាតរវាង QR នីមួយៗ
+            
+            // គណនាទំហំ QR នីមួយៗឱ្យសមស្របតាមទំហំក្រដាស
+            const availableWidth = pageWidth - (margin * 2) - ((cols - 1) * gap);
+            const qrSize = availableWidth / cols;
+
+            for (let i = 0; i < totalItems; i++) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+
+                const startY = 35; // គម្លាតពីខាងលើ បន្ទាប់ពីចំណងជើង និងឈ្មោះអ្នកបង្កើត
+
+                const x = margin + (col * (qrSize + gap)); // គម្លាត X
+                const y = startY + (row * (qrSize + gap + 15)); // គម្លាត Y
+
+                // បង្កើនទំព័រថ្មី ប្រសិនបើ Y លើសពីកម្ពស់ក្រដាស (Optional)
+                if (y + qrSize + 10 > pageHeight) {
+                    // ក្នុងករណីនេះ យើងគ្រាន់តែបញ្ឈប់ការគូរដើម្បីការពារការហៀរចេញ
+                    break; 
+                }
+
+                pdf.addImage(imgData, 'PNG', x, y, qrSize, qrSize);
+                
+                // បន្ថែមឈ្មោះ WiFi នៅក្រោមរូបនីមួយៗ
+                pdf.setFontSize(10);
+                pdf.text("SSID: " + ssid, x + (qrSize / 2), y + qrSize + 5, { align: 'center' });
+            }
+            
+            pdf.save(`wifi_qr_sheet_${ssid}.pdf`);
+        }
+    }
+
+    function printQR() {
+        const qrContainer = document.getElementById("qrcode");
+        const img = qrContainer.querySelector("img");
+        const printSize = document.getElementById("print-size").value;
+        const paperSize = document.getElementById("paper-size").value;
+
+        let sizeStyle = "max-width: 50%;"; // មធ្យម (Medium)
+        if (printSize === "small") sizeStyle = "max-width: 25%;";
+        if (printSize === "large") sizeStyle = "max-width: 80%;";
+        
+        if (img && img.src) {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>Print QR Code</title>');
+            printWindow.document.write('<style>@page { size: ' + paperSize + '; margin: 0; } body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;} img{' + sizeStyle + ' height: auto;}</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write('<img src="' + img.src + '">');
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        }
+    }
+
+    function togglePassword() {
+        const passInput = document.getElementById("wifi-pass");
+        passInput.type = document.getElementById("show-pass").checked ? "text" : "password";
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        document.getElementById('dark-mode-toggle').innerText = isDark ? '☀️' : '🌙';
+        saveSettings();
+    }
+
+    // មុខងារសម្អាតការកំណត់ទាំងអស់ (Reset)
+    function resetSettings() {
+        if (confirm("តើអ្នកពិតជាចង់សម្អាតការកំណត់ទាំងអស់មែនទេ?")) {
+            // ១. លុបទិន្នន័យពី localStorage
+            localStorage.removeItem("qrWiFiSettings");
+            
+            // ២. កំណត់តម្លៃ Input ត្រឡប់ទៅសភាពដើម
+            document.getElementById("wifi-ssid").value = "";
+            document.getElementById("wifi-pass").value = "";
+            document.getElementById("wifi-type").value = "WPA";
+            document.getElementById("show-pass").checked = false;
+            togglePassword(); // លាក់លេខសម្ងាត់វិញ
+            
+            document.getElementById("qr-size").value = 200;
+            document.getElementById("size-text").innerText = "200";
+            document.getElementById("logo-input").value = ""; // លុប File ដែលបានរើស
+            document.getElementById("add-frame").checked = false;
+            document.getElementById("frame-text").value = "SCAN ME";
+            document.getElementById("print-size").value = "medium";
+            document.getElementById("paper-size").value = "a4";
+            document.getElementById("sheet-cols").value = 2;
+            document.getElementById("sheet-rows").value = 3;
+            document.getElementById("color-dark").value = "#000000";
+            document.getElementById("color-light").value = "#ffffff";
+            
+            document.body.classList.remove("dark-mode");
+            document.getElementById("dark-mode-toggle").innerText = "🌙";
+
+            // ៣. លុបរូបភាព QR ចេញពីអេក្រង់ និងលាក់ប៊ូតុងទាញយក
+            document.getElementById("qrcode").innerHTML = "";
+            document.getElementById("download-btn").style.display = "none";
+            document.getElementById("pdf-btn").style.display = "none";
+            document.getElementById("print-btn").style.display = "none";
+        }
+    }
+
+    // មុខងារទាញយកការកំណត់មកវិញនៅពេលបើកកម្មវិធី
+    window.onload = function() {
+        const saved = localStorage.getItem("qrWiFiSettings");
+        if (saved) {
+            const settings = JSON.parse(saved);
+            
+            if (settings.darkMode) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('dark-mode-toggle').innerText = '☀️';
+            }
+
+            // កំណត់តម្លៃទៅឱ្យ input វិញ
+            document.getElementById("color-dark").value = settings.colorDark;
+            document.getElementById("color-light").value = settings.colorLight;
+            document.getElementById("qr-size").value = settings.qrSize;
+            document.getElementById("size-text").innerText = settings.qrSize;
+            document.getElementById("frame-text").value = settings.frameText;
+            document.getElementById("add-frame").checked = settings.addFrame;
+            document.getElementById("wifi-ssid").value = settings.ssid || "";
+            document.getElementById("wifi-type").value = settings.encryption || "WPA";
+            document.getElementById("print-size").value = settings.printSize || "medium";
+            document.getElementById("paper-size").value = settings.paperSize || "a4";
+            document.getElementById("sheet-cols").value = settings.sheetCols || 2;
+            document.getElementById("sheet-rows").value = settings.sheetRows || 3;
+
+            if (document.getElementById("wifi-ssid").value !== "") {
+                generateQR(); // បង្កើត QR ភ្លាមៗបើមានឈ្មោះ WiFi ស្រាប់
+            }
+        }
+    };
+
+    // ចុះឈ្មោះ Service Worker សម្រាប់មុខងារ Offline
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker Registered'))
+                .catch(err => console.error('Service Worker Registration Failed', err));
+        });
+    }
+</script>
+
+</body>
+</html>

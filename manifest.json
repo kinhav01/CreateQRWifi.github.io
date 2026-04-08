@@ -1,0 +1,15 @@
+{
+  "name": "QR WiFi Generator",
+  "short_name": "QRWiFi",
+  "start_url": "./Create QR.html",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#28a745",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3408/3408545.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
